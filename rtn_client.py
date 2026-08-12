@@ -11,7 +11,8 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler, NetmikoTimeoutException
 from pydantic import BaseModel
-from scapy.all import ARP, Ether, srp
+from scapy.all import ARP, IP, Ether, sniff, srp
+from scapy.contrib.ospf import OSPF_Hdr
 
 app = FastAPI()
 WEBLCT_PORT = 13443
@@ -209,7 +210,17 @@ def api_get_lldp(cfg: DeviceConfig):
     except Exception as e:  # noqa: BLE001
         return {"error": str(e), "ip": cfg.ip}
 
-@app.get("/scan_default")
+@app.get("/scan_ospf_passive")
+def api_scan_ospf_passive(timeout: int = 30):
+    """Пассивно слушает OSPF Hello-пакеты в течение timeout секунд."""
+    neighbors = set()
+    def packet_callback(pkt):
+        if pkt.haslayer(OSPF_Hdr) and pkt.haslayer(IP):
+            neighbors.add(pkt[IP].src)
+
+    # Фильтр: протокол 89 (OSPF)
+    sniff(filter="ip proto 89", prn=packet_callback, timeout=timeout, store=0)
+    return {"neighbors": list(neighbors)}
 def api_scan_default():
     """Сканирует дефолтную подсеть 129.0.0.0/16."""
     return scan_network("129.0.0.0/16")
