@@ -130,10 +130,11 @@ def api_find_devices(
 
         # Устанавливаем правильный Referer для запроса к API
         session.headers.update({"Referer": f"https://{host}:{WEBLCT_PORT}/weblct/page/nelist.html"})
-        resp = session.post(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet?sfid=280&flag=1", timeout=5)
-        body = resp.text
+        # Выполняем POST и разрешаем редиректы
+        resp = session.post(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet?sfid=280&flag=1", timeout=5, allow_redirects=True)
         print(f"DEBUG: WebLCT Response (neListServlet) status: {resp.status_code}")
-        print(f"DEBUG: WebLCT Response (neListServlet) body: '{body[:500]}'")
+        print(f"DEBUG: WebLCT Cookies after request: {session.cookies.get_dict()}")
+        body = resp.text
 
         if not body.strip():
             raise HTTPException(
