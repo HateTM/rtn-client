@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import http.cookiejar
-import json as _json
 import re
 import ssl
 import urllib.parse
@@ -48,29 +47,17 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
         req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
         body = opener.open(req, timeout=5).read().decode("utf-8")
-        # print(f"DEBUG: WebLCT body response: {body[:500]}")
         out = []
         root_elem = ET.fromstring(body)
         error_elem = root_elem.find("error-message")
         if error_elem is not None:
-            raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get('errorinfo')}")
+            raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get("errorinfo")}")
         for elem in root_elem.iter():
             if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
-        body = opener.open(req, timeout=5).read().decode("utf-8")
-        out = []
-        try:
-            for elem in ET.fromstring(body).iter():
-                if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
-                    item = {c.tag.lower(): (c.text or "").strip() for c in elem}
-                    if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
-        except Exception: # noqa: BLE001
-            data = _json.loads(body)
-            for item in (data if isinstance(data, list) else data.get("rows", [])):
+                item = {c.tag.lower(): (c.text or "").strip() for c in elem}
                 if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
         return out
-    except Exception as e:
-        print(f"DEBUG: Exception in find_devices: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) # noqa: BLE001
+    except Exception as e: raise HTTPException(status_code=500, detail=str(e)) # noqa: BLE001
 
 def probe_rtn_radio(client: RTNClient) -> dict:
     result = {"rsl": None, "modulation": None, "frequency": None, "tx_power": None, "worked_commands": []}
