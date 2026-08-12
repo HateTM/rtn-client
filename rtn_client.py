@@ -215,7 +215,7 @@ def api_scan_ospf_passive(timeout: int = 30):
     """Пассивно слушает OSPF Hello-пакеты в течение timeout секунд."""
     neighbors = set()
     def packet_callback(pkt):
-        if pkt.haslayer(OSPF_Hdr) and pkt.haslayer(IP):
+        if pkt.haslayer(IP) and pkt[IP].proto == 89:
             print(f"DEBUG: OSPF Packet detected from {pkt[IP].src}")
             neighbors.add(pkt[IP].src)
     print(f"DEBUG: Starting passive sniff for OSPF (timeout={timeout}s)...")
