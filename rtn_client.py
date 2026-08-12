@@ -140,15 +140,19 @@ def api_find_devices(
                 status_code=500,
                 detail="WebLCT returned empty response from neListServlet",
             )
-
+        # WebLCT возвращает XML, где устройства упакованы в 'row-params'
+        # Нам нужно найти элементы 'param' с именами 'devip' и 'name'
         root_elem = ET.fromstring(body)
-
         out = []
-        for elem in root_elem.iter():
-            if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
-                item = {c.tag.lower(): (c.text or "").strip() for c in elem}
-                if item.get("devip"):
-                    out.append({"ip": item["devip"], "name": item.get("name", "")})
+        for row in root_elem.findall(".//row-params"):
+            item = {}
+            for param in row.findall("param"):
+                name = param.get("name")
+                value = param.get("value")
+                if name and value:
+                    item[name] = value
+            if item.get("devip"):
+                out.append({"ip": item["devip"], "name": item.get("name", "Unknown")})
         return out
     except Exception as e:  # noqa: BLE001
         import traceback
