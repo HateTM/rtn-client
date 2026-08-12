@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, http.cookiejar, re, ssl, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+
+import argparse
+import http.cookiejar
+import re
+import ssl
+import time
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler
@@ -119,8 +128,9 @@ def api_find_devices(
                 if item.get("devip"):
                     out.append({"ip": item["devip"], "name": item.get("name", "")})
         return out
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))  # noqa: BLE001
+    except Exception as e: # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def probe_rtn_radio(client: RTNClient) -> dict:
@@ -134,8 +144,9 @@ def probe_rtn_radio(client: RTNClient) -> dict:
     for cmd in ["display radio", "display rfunit"]:
         try:
             out = client.execute(cmd)
-        except Exception:
-            continue  # noqa: BLE001, S112
+        except Exception: # noqa: BLE001
+            continue
+            continue
         if any(marker in out.lower() for marker in FAIL_MARKERS):
             continue
         result["worked_commands"].append(cmd)
