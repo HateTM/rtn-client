@@ -154,6 +154,7 @@ def api_find_devices(
                     item[name] = value
             if item.get("devip"):
                 out.append({"ip": item["devip"], "name": item.get("name", "Unknown")})
+        print(f"DEBUG: Found {len(out)} devices")
         return out
     except Exception as e:  # noqa: BLE001
         import traceback
