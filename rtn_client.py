@@ -12,7 +12,8 @@ from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler, NetmikoTimeoutException
 from pydantic import BaseModel
 from scapy.all import ARP, IP, Ether, sniff, srp
-from scapy.contrib.ospf import OSPF_Hdr
+from windows_scanner import ProbeND
+from netprobe import list_ifaces
 
 app = FastAPI()
 WEBLCT_PORT = 13443
@@ -237,6 +238,65 @@ def api_scan_ospf(cfg: DeviceConfig):
     ips = re.findall(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', out)
     return {"neighbors": list(set(ips))}
 
+@app.get("/scan_windows")
+async def api_scan_windows(iface_index: int = 0, timeout: int = 25):
+    """Активный ARP/Passive скан через API Windows (только для Windows)."""
+    import os
+    if os.name != 'nt':
+        return {"error": "This endpoint only works on Windows"}
+    
+    ifaces = list_ifaces(show_all=True)
+    if iface_index >= len(ifaces):
+        return {"error": "Invalid interface index"}
+    
+    target_iface = ifaces[iface_index]
+    logs = []
+    def log_func(msg):
+        logs.append(msg)
+    
+    # Запуск в отдельном потоке, чтобы не блокировать event loop
+    from starlette.concurrency import run_in_threadpool
+    def run_scan():
+        scanner = ProbeND(target_iface, log_func, sniff_time=timeout)
+        # TODO: Получить сеть из iface или настроек
+        return scanner.scan("192.168.1.0/24")
+    
+    found_hosts = await run_in_threadpool(run_scan)
+    return {"logs": logs, "found": found_hosts}
+
+@app.post("/trigger_discovery")
+def api_trigger_discovery(
+    host: str,
+    search_area: str,
+    username: str = "root",
+    password: str = "Huawei12345!",
+):
+    """Инициирует Discovery-поиск новых устройств через WebLCT."""
+    session = requests.Session()
+    session.verify = False
+    # Нужно использовать существующую сессию или авторизоваться заново
+    # Здесь предполагаем, что авторизация уже пройдена или WebLCT позволяет этот запрос
+    
+    xml_data = f"""<?xml version="1.0" encoding="utf-8"?>
+<datainterface>
+    <bussiness-params>
+        <row-params>
+            <param name="searchArea" value="{search_area}"/>
+            <param name="domainType" value="3"/>
+            <param name="username" value="{username}"/>
+            <param name="password" value="{password}"/>
+            <param name="connectType" value="normal"/>
+        </row-params>
+    </bussiness-params>
+</datainterface>"""
+    
+    resp = session.post(
+        f"https://{host}:{WEBLCT_PORT}/weblct/deviceSearchServlet?sfid=24602&flag=1",
+        data={"inputdata": xml_data},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=10
+    )
+    return {"status": resp.status_code, "response": resp.text}
 def scan_network(ip_range: str) -> list[dict]:
     """Сканирует сеть ARP-запросами."""
     try:
