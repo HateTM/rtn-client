@@ -213,9 +213,15 @@ def api_get_lldp(cfg: DeviceConfig):
 @app.get("/scan_ospf_passive")
 def api_scan_ospf_passive(timeout: int = 30):
     """Пассивно слушает OSPF Hello-пакеты в течение timeout секунд."""
-    print("DEBUG: Starting promiscuous sniff for 10 packets...")
-    sniff(count=10, prn=lambda p: print(f"DEBUG: Caught packet: {p.summary()}"), store=0)
-    return {"status": "sniff_complete"}
+    neighbors = set()
+    def packet_callback(pkt):
+        if pkt.haslayer(OSPF_Hdr) and pkt.haslayer(IP):
+            print(f"DEBUG: OSPF Packet detected from {pkt[IP].src}")
+            neighbors.add(pkt[IP].src)
+    print(f"DEBUG: Starting passive sniff for OSPF (timeout={timeout}s)...")
+    sniff(filter="ip proto 89", prn=packet_callback, timeout=timeout, store=0)
+    print(f"DEBUG: Sniff finished. Found neighbors: {neighbors}")
+    return {"neighbors": list(neighbors)}
 def api_scan_default():
     """Сканирует дефолтную подсеть 129.0.0.0/16."""
     return scan_network("129.0.0.0/16")
