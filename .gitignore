@@ -7,3 +7,6 @@ dist/
 *.pyo
 *.pyd
 .env
+venv
+.codegraph
+
