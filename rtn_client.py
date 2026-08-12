@@ -136,9 +136,7 @@ def api_find_devices(
         print(f"DEBUG: WebLCT Response (neListServlet) status: {resp.status_code}")
         print(f"DEBUG: WebLCT Cookies after request: {session.cookies.get_dict()}")
         body = resp.text
-        print(f"DEBUG: WebLCT Cookies after request: {session.cookies.get_dict()}")
-        body = resp.text
-
+        print(f"DEBUG: WebLCT Response (neListServlet) body: {body[:1000]}")
         if not body.strip():
             raise HTTPException(
                 status_code=500,
