@@ -215,11 +215,17 @@ def api_scan_ospf_passive(timeout: int = 30):
     """Пассивно слушает OSPF Hello-пакеты в течение timeout секунд."""
     neighbors = set()
     def packet_callback(pkt):
+        # Логируем все приходящие пакеты для отладки
+        if pkt.haslayer(IP):
+            print(f"DEBUG: Packet received from {pkt[IP].src} (Protocol: {pkt[IP].proto})")
         if pkt.haslayer(OSPF_Hdr) and pkt.haslayer(IP):
+            print(f"DEBUG: OSPF Packet detected from {pkt[IP].src}")
             neighbors.add(pkt[IP].src)
 
     # Фильтр: протокол 89 (OSPF)
+    print(f"DEBUG: Starting passive sniff for {timeout}s...")
     sniff(filter="ip proto 89", prn=packet_callback, timeout=timeout, store=0)
+    print(f"DEBUG: Sniff finished. Found neighbors: {neighbors}")
     return {"neighbors": list(neighbors)}
 def api_scan_default():
     """Сканирует дефолтную подсеть 129.0.0.0/16."""
