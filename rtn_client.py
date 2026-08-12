@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, http.cookiejar, re, ssl, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+
+import argparse
+import http.cookiejar
+import re
+import ssl
+import time
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler
@@ -55,8 +64,7 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         for attempt in range(3):
             with opener.open(req, timeout=5) as r:
                 body = r.read().decode("utf-8")
-                print(f"DEBUG: WebLCT Response Headers:
-{r.info()}")
+                print("DEBUG: WebLCT Response Headers: " + str(r.info()))
                 print(f"DEBUG: WebLCT Response Body: {body[:500]}")
             root_elem = ET.fromstring(body)
             error_elem = root_elem.find("error-message")
@@ -72,10 +80,13 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
                 item = {c.tag.lower(): (c.text or "").strip() for c in elem}
                 if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
         return out
-    except Exception as e:
+    except Exception as e: # noqa: BLE001
         import traceback
         print(f"DEBUG: Critical error: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e)) # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        print(f"DEBUG: Critical error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 def probe_rtn_radio(client: RTNClient) -> dict:
     result = {"rsl": None, "modulation": None, "frequency": None, "tx_power": None, "worked_commands": []}
