@@ -61,6 +61,7 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         
         # Проверка сессии
         # Проверка сессии перед запросом данных
+        time.sleep(2)
         # session_check = opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/sessionIdCheck", timeout=5).read().decode("utf-8")
         # print(f"DEBUG: Session check response: {session_check}")
         time.sleep(2)
