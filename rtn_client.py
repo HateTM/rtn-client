@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
-import argparse
-import http.cookiejar
-import re
-import ssl
-import time
-import urllib.parse
-import urllib.request
-import xml.etree.ElementTree as ET
-
+import argparse, http.cookiejar, re, ssl, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler
@@ -42,10 +33,10 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
     ctx = ssl.create_default_context(); ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
     cj = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj), urllib.request.HTTPSHandler(context=ctx))
+    opener.addheaders = [("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36")]
     try:
         opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/page/login.html", timeout=5)
         data = urllib.parse.urlencode({"txtname": username, "txtpassword": password}).encode()
-        opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
         time.sleep(2)
         req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
@@ -57,18 +48,8 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
                 break
             time.sleep(3)
         else:
-            raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get('errorinfo')}")
-        out = []
-        for elem in root_elem.iter():
-            if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
-                item = {c.tag.lower(): (c.text or "").strip() for c in elem}
-                if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
-        body = opener.open(req, timeout=5).read().decode("utf-8")
-        out = []
-        root_elem = ET.fromstring(body)
-        error_elem = root_elem.find("error-message")
-        if error_elem is not None:
             raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get("errorinfo")}")
+        out = []
         for elem in root_elem.iter():
             if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
                 item = {c.tag.lower(): (c.text or "").strip() for c in elem}
