@@ -49,38 +49,25 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         ("Origin", f"https://{host}:{WEBLCT_PORT}")
     ]
     try:
-        print("DEBUG: Starting login process...")
         opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/page/login.html", timeout=5)
         data = urllib.parse.urlencode({"txtname": username, "txtpassword": password}).encode()
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
-        print("DEBUG: TSLoginCheck done.")
-        time.sleep(2)
-        
-        req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
-        print("DEBUG: TSLoginCheck done.")
-        
-        # Проверка сессии
-        # Проверка сессии перед запросом данных
-        time.sleep(2)
-        # session_check = opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/sessionIdCheck", timeout=5).read().decode("utf-8")
-        # print(f"DEBUG: Session check response: {session_check}")
-        time.sleep(2)
-        print(f"DEBUG: Session check response: {session_check}")
         time.sleep(2)
         
         req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
         for attempt in range(3):
             with opener.open(req, timeout=5) as r:
                 body = r.read().decode("utf-8")
-                print("DEBUG: WebLCT Response Headers: " + str(r.info()))
-                print(f"DEBUG: WebLCT Response Body: {body[:500]}")
+            
+            if "<error-message" in body and "busy" in body.lower():
+                print(f"DEBUG: Attempt {attempt+1} - WebLCT is busy.")
+                time.sleep(5)
+                continue
+                
             root_elem = ET.fromstring(body)
-            error_elem = root_elem.find("error-message")
-            if error_elem is None or "busy" not in error_elem.get("errorinfo", "").lower():
-                break
-            time.sleep(5) 
+            break
         else:
-            raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get("errorinfo")}")
+            raise HTTPException(status_code=500, detail="WebLCT error: Server is busy")
         
         out = []
         for elem in root_elem.iter():
@@ -89,11 +76,7 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
                 if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
         return out
     except Exception as e: # noqa: BLE001
-        import traceback
-        print(f"DEBUG: Critical error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
-        import traceback
-        print(f"DEBUG: Critical error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def probe_rtn_radio(client: RTNClient) -> dict:
