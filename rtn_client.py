@@ -54,6 +54,10 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         data = urllib.parse.urlencode({"txtname": username, "txtpassword": password}).encode()
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
         print("DEBUG: TSLoginCheck done.")
+        time.sleep(2)
+        
+        req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
+        print("DEBUG: TSLoginCheck done.")
         
         # Проверка сессии
         session_check = opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/sessionIdCheck", timeout=5).read().decode("utf-8")
