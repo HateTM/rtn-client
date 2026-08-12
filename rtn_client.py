@@ -241,6 +241,7 @@ def api_scan_ospf(cfg: DeviceConfig):
 @app.get("/scan_windows")
 async def api_scan_windows(iface_index: int = 0, timeout: int = 25):
     """Активный ARP/Passive скан через API Windows (только для Windows)."""
+    print("DEBUG: api_scan_windows called!")
     import os
     if os.name != 'nt':
         return {"error": "This endpoint only works on Windows"}
