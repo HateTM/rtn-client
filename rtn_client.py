@@ -59,6 +59,8 @@ class RTNClient:
             return ssh.send_command(
                 command, read_timeout=15, strip_prompt=True, strip_command=True
             )
+    def get_lldp_neighbors(self) -> str:
+        return self.execute("display lldp neighbor brief")
 
 
 @app.post("/probe")
@@ -188,6 +190,18 @@ def probe_rtn_radio(client: RTNClient) -> dict:
             if result[k] is None and (m := re.search(p, out, re.IGNORECASE)):
                 result[k] = m.group(1)
     return result
+
+
+@app.post("/get_lldp")
+def api_get_lldp(cfg: DeviceConfig):
+    client = RTNClient(
+        cfg.ip,
+        cfg.username,
+        cfg.password,
+        proxy_url=cfg.proxy_url,
+        jump_host=cfg.jump_host,
+    )
+    return {"lldp_neighbors": client.get_lldp_neighbors()}
 
 
 if __name__ == "__main__":
