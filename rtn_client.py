@@ -153,8 +153,8 @@ def api_find_devices(
                 value = param.get("value")
                 if name and value:
                     item[name] = value
-            if item.get("devip"):
-                out.append({"ip": item["devip"], "name": item.get("name", "Unknown")})
+            if item.get("neGWAddress"):
+                out.append({"ip": item["neGWAddress"], "name": item.get("neName", "Unknown")})
         print(f"DEBUG: Found {len(out)} devices")
         return out
     except Exception as e:  # noqa: BLE001
