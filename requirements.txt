@@ -1,1 +1,7 @@
 scapy>=2.6.1
+fastapi
+uvicorn
+netmiko
+pydantic
+requests
+urllib3
