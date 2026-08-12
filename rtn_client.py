@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-
-import argparse
-import http.cookiejar
-import re
-import ssl
-import time
-import urllib.parse
-import urllib.request
-import xml.etree.ElementTree as ET
-
+import argparse, http.cookiejar, re, ssl, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler
@@ -49,33 +40,42 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         ("Origin", f"https://{host}:{WEBLCT_PORT}")
     ]
     try:
+        print("DEBUG: Starting login process...")
         opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/page/login.html", timeout=5)
         data = urllib.parse.urlencode({"txtname": username, "txtpassword": password}).encode()
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
-        # Проверка сессии перед запросом данных
+        print("DEBUG: TSLoginCheck done.")
+        
+        # Проверка сессии
         session_check = opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/sessionIdCheck", timeout=5).read().decode("utf-8")
         print(f"DEBUG: Session check response: {session_check}")
         time.sleep(2)
+        
         req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
         for attempt in range(3):
             with opener.open(req, timeout=5) as r:
                 body = r.read().decode("utf-8")
-                print("DEBUG: WebLCT Response Headers: " + str(r.info()))
+                print(f"DEBUG: WebLCT Response Headers:
+{r.info()}")
                 print(f"DEBUG: WebLCT Response Body: {body[:500]}")
             root_elem = ET.fromstring(body)
             error_elem = root_elem.find("error-message")
             if error_elem is None or "busy" not in error_elem.get("errorinfo", "").lower():
                 break
-            time.sleep(5) # Увеличили задержку
+            time.sleep(5) 
         else:
             raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get("errorinfo")}")
+        
         out = []
         for elem in root_elem.iter():
             if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
                 item = {c.tag.lower(): (c.text or "").strip() for c in elem}
                 if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
         return out
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e)) # noqa: BLE001
+    except Exception as e:
+        import traceback
+        print(f"DEBUG: Critical error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e)) # noqa: BLE001
 
 def probe_rtn_radio(client: RTNClient) -> dict:
     result = {"rsl": None, "modulation": None, "frequency": None, "tx_power": None, "worked_commands": []}
