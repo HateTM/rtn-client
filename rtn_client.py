@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import requests
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from netmiko import ConnectHandler
+from netmiko import ConnectHandler, NetmikoTimeoutException
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -201,7 +201,12 @@ def api_get_lldp(cfg: DeviceConfig):
         proxy_url=cfg.proxy_url,
         jump_host=cfg.jump_host,
     )
-    return {"lldp_neighbors": client.get_lldp_neighbors()}
+    try:
+        return {"lldp_neighbors": client.get_lldp_neighbors()}
+    except NetmikoTimeoutException:
+        return {"error": "Device unreachable (timeout)", "ip": cfg.ip}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e), "ip": cfg.ip}
 
 
 if __name__ == "__main__":
