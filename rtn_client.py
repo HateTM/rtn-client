@@ -124,13 +124,16 @@ def api_find_devices(
         )
         time.sleep(2)
 
-        # 3. Получение списка
-        # 3. Получение списка
+        # 3. Получение списка (имитируем поведение браузера)
+        # Сначала посещаем nelist.html (как в перехваченных запросах)
+        session.get(f"https://{host}:{WEBLCT_PORT}/weblct/page/nelist.html", timeout=5)
+
         # Устанавливаем правильный Referer для запроса к API
-        session.headers.update({"Referer": f"https://{host}:{WEBLCT_PORT}/weblct/page/nelistmain.html"})
-        resp = session.get(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", timeout=5)
+        session.headers.update({"Referer": f"https://{host}:{WEBLCT_PORT}/weblct/page/nelist.html"})
+        resp = session.post(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet?sfid=280&flag=1", timeout=5)
         body = resp.text
-        print(f"DEBUG: WebLCT Response (neListServlet): '{body}'")
+        print(f"DEBUG: WebLCT Response (neListServlet) status: {resp.status_code}")
+        print(f"DEBUG: WebLCT Response (neListServlet) body: '{body[:500]}'")
 
         if not body.strip():
             raise HTTPException(
