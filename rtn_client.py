@@ -98,8 +98,8 @@ def api_find_devices(
             session.get(
                 f"https://{host}:{WEBLCT_PORT}/weblct/TSLogoutServlet", timeout=2
             )
-        except Exception:
-            pass
+        except requests.RequestException as e:
+            print(f"DEBUG: Logout failed: {e}")
 
         print("DEBUG: Starting login process...")
         # 2. Логин
@@ -125,9 +125,10 @@ def api_find_devices(
         time.sleep(2)
 
         # 3. Получение списка
-        resp = session.get(
-            f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", timeout=5
-        )
+        # 3. Получение списка
+        # Устанавливаем правильный Referer для запроса к API
+        session.headers.update({"Referer": f"https://{host}:{WEBLCT_PORT}/weblct/page/nelistmain.html"})
+        resp = session.get(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", timeout=5)
         body = resp.text
         print(f"DEBUG: WebLCT Response (neListServlet): '{body}'")
 
@@ -146,7 +147,7 @@ def api_find_devices(
                 if item.get("devip"):
                     out.append({"ip": item["devip"], "name": item.get("name", "")})
         return out
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         import traceback
 
         print(f"DEBUG: Critical error: {traceback.format_exc()}")
@@ -164,7 +165,8 @@ def probe_rtn_radio(client: RTNClient) -> dict:
     for cmd in ["display radio", "display rfunit"]:
         try:
             out = client.execute(cmd)
-        except Exception:
+        except Exception as e:  # noqa: BLE001
+            print(f"DEBUG: Command execution failed: {e}")
             continue
         if any(marker in out.lower() for marker in FAIL_MARKERS):
             continue
