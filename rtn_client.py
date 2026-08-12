@@ -11,6 +11,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler, NetmikoTimeoutException
 from pydantic import BaseModel
+from scapy.all import ARP, Ether, srp
 
 app = FastAPI()
 WEBLCT_PORT = 13443
@@ -207,6 +208,36 @@ def api_get_lldp(cfg: DeviceConfig):
         return {"error": "Device unreachable (timeout)", "ip": cfg.ip}
     except Exception as e:  # noqa: BLE001
         return {"error": str(e), "ip": cfg.ip}
+
+@app.get("/scan_default")
+def api_scan_default():
+    """Сканирует дефолтную подсеть 129.0.0.0/16."""
+    return scan_network("129.0.0.0/16")
+
+@app.post("/scan_ospf")
+def api_scan_ospf(cfg: DeviceConfig):
+    """Опрашивает OSPF соседей на устройстве."""
+    client = RTNClient(
+        cfg.ip, cfg.username, cfg.password,
+        proxy_url=cfg.proxy_url, jump_host=cfg.jump_host
+    )
+    out = client.execute("display ospf peer brief")
+    ips = re.findall(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', out)
+    return {"neighbors": list(set(ips))}
+
+def scan_network(ip_range: str) -> list[dict]:
+    """Сканирует сеть ARP-запросами."""
+    try:
+        arp = ARP(pdst=ip_range)
+        ether = Ether(dst="ff:ff:ff:ff:ff:ff")
+        packet = ether / arp
+        result = srp(packet, timeout=3, verbose=0)[0]
+        found = []
+        for _, received in result:
+            found.append({"ip": received.psrc, "mac": received.hwsrc})
+        return {"network": ip_range, "found": found}
+    except Exception as e:  # noqa: BLE001
+        return {"error": str(e)}
 
 
 if __name__ == "__main__":
