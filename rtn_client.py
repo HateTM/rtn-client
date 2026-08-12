@@ -104,7 +104,7 @@ def probe_rtn_radio(client: RTNClient) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    p = ap.add_parser("serve")
+    p = sub.add_parser("serve")
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8000)
     args = ap.parse_args()
