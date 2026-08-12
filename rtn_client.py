@@ -48,6 +48,9 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
         req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
         body = opener.open(req, timeout=5).read().decode("utf-8")
+        print(f"DEBUG: WebLCT body response: {body[:500]}")
+        out = []
+        body = opener.open(req, timeout=5).read().decode("utf-8")
         out = []
         try:
             for elem in ET.fromstring(body).iter():
