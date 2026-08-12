@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, http.cookiejar, re, ssl, time, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+
+import argparse
+import http.cookiejar
+import re
+import ssl
+import time
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from netmiko import ConnectHandler
@@ -46,8 +55,7 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         for attempt in range(3):
             with opener.open(req, timeout=5) as r:
                 body = r.read().decode("utf-8")
-                print(f"DEBUG: WebLCT Response Headers:
-{r.info()}")
+                print(f"DEBUG: WebLCT Response Headers: {r.info()}")
                 print(f"DEBUG: WebLCT Response Body: {body[:500]}")
             root_elem = ET.fromstring(body)
             error_elem = root_elem.find("error-message")
