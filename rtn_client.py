@@ -5,6 +5,7 @@ import argparse
 import http.cookiejar
 import re
 import ssl
+import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -45,7 +46,23 @@ def api_find_devices(root: str, host: str = "localhost", username: str = "admin"
         opener.open(f"https://{host}:{WEBLCT_PORT}/weblct/page/login.html", timeout=5)
         data = urllib.parse.urlencode({"txtname": username, "txtpassword": password}).encode()
         opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
+        opener.open(urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data))
+        time.sleep(2)
         req = urllib.request.Request(f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", data=b"")
+        for attempt in range(3):
+            body = opener.open(req, timeout=5).read().decode("utf-8")
+            root_elem = ET.fromstring(body)
+            error_elem = root_elem.find("error-message")
+            if error_elem is None or "busy" not in error_elem.get("errorinfo", "").lower():
+                break
+            time.sleep(3)
+        else:
+            raise HTTPException(status_code=500, detail=f"WebLCT error: {error_elem.get('errorinfo')}")
+        out = []
+        for elem in root_elem.iter():
+            if "devinfo" in elem.tag.lower() or elem.tag.lower().endswith("row"):
+                item = {c.tag.lower(): (c.text or "").strip() for c in elem}
+                if item.get("devip"): out.append({"ip": item["devip"], "name": item.get("name", "")})
         body = opener.open(req, timeout=5).read().decode("utf-8")
         out = []
         root_elem = ET.fromstring(body)
