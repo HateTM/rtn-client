@@ -16,7 +16,7 @@ app = FastAPI()
 WEBLCT_PORT = 13443
 FAIL_MARKERS = ("not recognized", "unrecognized", "invalid", "error:")
 
-# Отключаем предупреждения о небезопасном HTTPS (для старых устройств)
+# Отключаем предупреждения о небезопасном HTTPS
 requests.packages.urllib3.disable_warnings(
     requests.packages.urllib3.exceptions.InsecureRequestWarning
 )
@@ -82,7 +82,7 @@ def api_find_devices(
     password: str = "Changeme_123",
 ):
     session = requests.Session()
-    session.verify = False  # Отключаем проверку сертификатов для совместимости с WebLCT
+    session.verify = False
     session.headers.update(
         {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
@@ -102,24 +102,40 @@ def api_find_devices(
             pass
 
         print("DEBUG: Starting login process...")
-        # 2. Получение кук
-        session.get(f"https://{host}:{WEBLCT_PORT}/weblct/page/login.html", timeout=5)
-
-        # 3. Логин
+        # 2. Логин
         data = {"txtname": username, "txtpassword": password}
         resp = session.post(
             f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data, timeout=5
         )
         print(f"DEBUG: TSLoginCheck status: {resp.status_code}")
-
+        print(f"DEBUG: TSLoginCheck response: {resp.text[:500]}")
+        print(f"DEBUG: Cookies after login: {session.cookies.get_dict()}")
+        # 3. Логин
+        data = {
+            "txtname_show": "",
+            "txtname": username,
+            "txtpassword_show": "",
+            "txtpassword": password,
+            "txtverifycode": "",
+            "submitbtn": "Login"
+        }
+        resp = session.post(
+            f"https://{host}:{WEBLCT_PORT}/weblct/TSLoginCheck", data=data, timeout=5
+        )
         time.sleep(2)
 
-        # 4. Получение списка
+        # 3. Получение списка
         resp = session.get(
             f"https://{host}:{WEBLCT_PORT}/weblct/neListServlet", timeout=5
         )
         body = resp.text
-        print(f"DEBUG: WebLCT Response: {body[:500]}")
+        print(f"DEBUG: WebLCT Response (neListServlet): '{body}'")
+
+        if not body.strip():
+            raise HTTPException(
+                status_code=500,
+                detail="WebLCT returned empty response from neListServlet",
+            )
 
         root_elem = ET.fromstring(body)
 
@@ -148,8 +164,7 @@ def probe_rtn_radio(client: RTNClient) -> dict:
     for cmd in ["display radio", "display rfunit"]:
         try:
             out = client.execute(cmd)
-        except Exception: # noqa: BLE001
-            continue
+        except Exception:
             continue
         if any(marker in out.lower() for marker in FAIL_MARKERS):
             continue
